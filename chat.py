@@ -75,15 +75,20 @@ def generate_response(user_input, llm, index, embeddings):
     
     print(context)
      
-    prompt = ChatPromptTemplate.from_template("""
-    You are a helpful and knowledgeable AI assistant. Use the following context to answer the user's question.
-    If you cannot find the answer in the context, say so politely.
+    prompt = ChatPromptTemplate.from_template(
+    """System: You are a helpful AI assistant focused on providing accurate and relevant information.
 
     Context: {context}
-    
+
     User Question: {question}
-    
-    Answer:
+
+    Instructions:
+    1. Analyze the context carefully
+    2. Consider only facts presented in the context
+    3. Provide a clear and direct answer
+    4. If information is insufficient, state so explicitly
+
+    Response:
     """)
     
     print(prompt)

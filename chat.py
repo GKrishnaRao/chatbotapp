@@ -39,7 +39,7 @@ def initialize_pinecone():
         return None
    
 
-def get_similar_docs(query, index, embeddings, k=5):
+def get_similar_docs(query, index, embeddings, k=3):
     """Retrieve similar documents from Pinecone"""
     query_embedding = embeddings.embed_query(query)
     
@@ -76,17 +76,17 @@ def generate_response(user_input, llm, index, embeddings):
     #print(context)
      
     prompt = ChatPromptTemplate.from_template(
-    """System: You are a helpful AI assistant focused on providing accurate and relevant information.
+    """System: You are a helpful Expert Legal AI assistant focused on providing accurate and relevant information related to legal documents.
 
 Context: {context}
 
 User Question: {question}
 
-    Instructions:
-    1. Analyze the context carefully
-    2. Consider only facts presented in the context
-    3. Provide a clear and direct answer
-    4. If information is insufficient, state so explicitly
+Instructions:
+1. Analyze the context carefully, keeping in mind the legal and regulatory nature of the document.
+2. Consider only facts presented in the context without introducing assumptions or external information.
+3. Provide a clear, concise, and direct answer aligned with legal terminology and structure.
+4. If information is insufficient to answer the query, state so explicitly and suggest reviewing the full document for more details.
 
 Response:
 """)

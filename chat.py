@@ -23,7 +23,7 @@ def initialize_llm():
     try:
         return ChatGroq(
             groq_api_key=groq_api_key,
-            model_name="gemma-7b-it"
+            model_name="gemma2-9b-it"
         )
     except Exception as e:
         st.error(f"Error initializing LLM: {str(e)}")
@@ -49,9 +49,9 @@ def get_similar_docs(query, index, embeddings, k=3):
         top_k=k,
         include_metadata=True
     )
-    print("============== results ==========================")
-    print(results)
-    print("================ results ========================")
+    #print("============== results ==========================")
+    #print(results)
+    #print("================ results ========================")
     documents = []
     for match in results['matches']:
         doc = Document(
@@ -62,9 +62,9 @@ def get_similar_docs(query, index, embeddings, k=3):
             }
         )
         documents.append(doc)
-    print("================ documents ========================")
-    print(documents)
-    print("================== documents ======================")
+    #print("================ documents ========================")
+    #print(documents)
+    #print("================== documents ======================")
     return documents
 
 def generate_response(user_input, llm, index, embeddings):
@@ -73,23 +73,23 @@ def generate_response(user_input, llm, index, embeddings):
     
     context = "\n".join([doc.page_content for doc in similar_docs])
     
-    print(context)
+    #print(context)
      
     prompt = ChatPromptTemplate.from_template(
-    """System: You are a helpful AI assistant focused on providing accurate and relevant information.
+    """System: You are a helpful Expert Legal AI assistant focused on providing accurate and relevant information related to legal documents.
 
-    Context: {context}
+Context: {context}
 
-    User Question: {question}
+User Question: {question}
 
-    Instructions:
-    1. Analyze the context carefully
-    2. Consider only facts presented in the context
-    3. Provide a clear and direct answer
-    4. If information is insufficient, state so explicitly
+Instructions:
+1. Analyze the context carefully, keeping in mind the legal and regulatory nature of the document.
+2. Consider only facts presented in the context without introducing assumptions or external information.
+3. Provide a clear, concise, and direct answer aligned with legal terminology and structure.
+4. If information is insufficient to answer the query, state so explicitly and suggest reviewing the full document for more details.
 
-    Response:
-    """)
+Response:
+""")
     
     print(prompt)
 
@@ -97,7 +97,7 @@ def generate_response(user_input, llm, index, embeddings):
         context=context,
         question=user_input
     ))
-    print(response)
+    #print(response)
     return response.content, similar_docs
 
 def main():

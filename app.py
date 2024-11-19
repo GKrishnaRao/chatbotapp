@@ -42,7 +42,6 @@ document_chain = create_stuff_documents_chain(
     llm, 
     prompt,
     document_variable_name="context",
-    verbose=True
 )
 
 
@@ -62,7 +61,7 @@ def vector_embedding():
         
         # Get the index
         index = pc.Index(index_name)   
-            
+        print(index)
             
             
         # Create embeddings      
@@ -71,9 +70,11 @@ def vector_embedding():
         # Load and process documents
         loader = PyPDFDirectoryLoader("pdf")
         docs = loader.load()
+    
         text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
         documents = text_splitter.split_documents(docs)
-        
+        print(documents)
+        print('============ Outside the Code ============')
         # Create vectors and store in Pinecone
         for i, doc in enumerate(documents):
             vector = embeddings.embed_query(doc.page_content)
@@ -82,8 +83,9 @@ def vector_embedding():
                 "source": doc.metadata.get("source", ""),
                 "page": doc.metadata.get("page", 0)
             }
+            print('============ Run the Code ============ ', str(i))
             index.upsert(vectors=[{
-                "id": f"doc_{i}",
+                "id": f"doc_regulation{i}",
                 "values": vector,
                 "metadata": metadata
             }])

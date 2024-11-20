@@ -6,7 +6,6 @@ from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from langchain_core.documents import Document
 from pinecone import Pinecone
 from dotenv import load_dotenv
-import time
 
 
 from fastapi import FastAPI, HTTPException
@@ -14,8 +13,15 @@ from pydantic import BaseModel
 from typing import List
 import uvicorn
 import requests
+import logging
 import threading
-import asyncio
+
+# Add CORS middleware
+from fastapi.middleware.cors import CORSMiddleware
+
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # Load environment variables
 load_dotenv()
@@ -79,43 +85,53 @@ def get_similar_docs(query, index, embeddings, k=3):
 
 def generate_response(user_input, llm, index, embeddings):
     """Generate response using LLM and context from Pinecone"""
-    similar_docs = get_similar_docs(user_input, index, embeddings)
+    try:
+        similar_docs = get_similar_docs(user_input, index, embeddings)
     
-    context = "\n".join([doc.page_content for doc in similar_docs])
+        context = "\n".join([doc.page_content for doc in similar_docs])
     
-    #print(context)
+        #print(context)
      
-    prompt = ChatPromptTemplate.from_template(
-    """System: You are a helpful Expert Legal AI assistant focused on providing accurate and relevant information related to legal documents.
+        prompt = ChatPromptTemplate.from_template(
+        """System: You are a helpful Expert Legal AI assistant focused on providing accurate and relevant information related to legal documents.
 
-Context: {context}
+        Context: {context}
 
-User Question: {question}
+        User Question: {question}
 
-Instructions:
-1. Analyze the context carefully, keeping in mind the legal and regulatory nature of the document.
-2. Consider only facts presented in the context without introducing assumptions or external information.
-3. Provide a clear, concise, and direct answer aligned with legal terminology and structure.
-4. If information is insufficient to answer the query, state so explicitly and suggest reviewing the full document for more details.
+        Instructions:
+        1. Analyze the context carefully, keeping in mind the legal and regulatory nature of the document.
+        2. Consider only facts presented in the context without introducing assumptions or external information.
+        3. Provide a clear, concise, and direct answer aligned with legal terminology and structure.
+        4. If information is insufficient to answer the query, state so explicitly and suggest reviewing the full document for more details.
 
-Response:
-""")
-    
-    print(prompt)
+        Response:
+        """)
 
-    response = llm.invoke(prompt.format(
-        context=context,
-        question=user_input
-    ))
-    #print(response)
-    return response.content, similar_docs
-
-
-
+        response = llm.invoke(prompt.format(
+            context=context,
+            question=user_input
+        ))
+        #print(response)
+        return response.content, similar_docs
+    except Exception as e:
+        logger.error(f"Error generating response: {str(e)}")
+        return "I apologize, but I encountered an error generating the response.", []
 
 
-# Create FastAPI app
+
+
+# Initialize FastAPI app
 app = FastAPI()
+
+# Add CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Define request and response models
 class QueryRequest(BaseModel):
@@ -139,6 +155,9 @@ async def process_query(query: str):
             raise HTTPException(status_code=500, detail="Failed to initialize language model")
         
         pc = initialize_pinecone()
+        if pc is None:
+            raise HTTPException(status_code=500, detail="Failed to initialize Pinecone")
+        
         index = pc.Index("realincgemma")
         embeddings = GoogleGenerativeAIEmbeddings(
             model="models/embedding-001",
@@ -162,6 +181,7 @@ async def process_query(query: str):
             relevant_documents=relevant_docs
         )
     except Exception as e:
+        logger.error(f"Error processing query: {str(e)}")
         raise HTTPException(
             status_code=500,
             detail=f"An error occurred: {str(e)}"
@@ -173,10 +193,17 @@ async def query_endpoint(request: QueryRequest):
     """API endpoint to handle queries"""
     return await process_query(request.query)
 
+
+
+
+
 # Add this function to run the API server
-def run_api(port):
+def run_api(host: str, port: int):
     """Run the FastAPI server"""
-    uvicorn.run(app, host="https://realai-chatbot.onrender.com", port=port)
+    try:
+        uvicorn.run(app, host=host, port=port)
+    except Exception as e:
+        logger.error(f"Error running API server: {str(e)}")
     
     
 def main():
@@ -195,11 +222,16 @@ def main():
     st.title("Chat with Real AI")
     st.write("Ask me anything about DCPR 2034")
     
-    # Get the port from environment variable
+    # Get the port from environment variable or use default
     port = 8080
+    host = os.getenv("HOST", "0.0.0.0")
     
     # Start API server in a separate thread
-    api_thread = threading.Thread(target=lambda: run_api(port), daemon=True)
+    api_thread = threading.Thread(
+        target=run_api,
+        args=(host, port),
+        daemon=True
+    )
     api_thread.start()
     
     
@@ -209,12 +241,12 @@ def main():
         api_url = f"https://realai-chatbot.onrender.com/api/query"
         st.write(f"API Endpoint: {api_url}")
         
-        # Add API test form in sidebar
+         # Add API test form
         api_test_query = st.text_input("Test API Query")
         if st.button("Test API"):
             try:
                 response = requests.post(
-                    "https://realai-chatbot.onrender.com/api/query",
+                    api_url,
                     json={"query": api_test_query}
                 )
                 if response.status_code == 200:

@@ -162,7 +162,10 @@ async def process_query(query: str):
             relevant_documents=relevant_docs
         )
     except Exception as e:
-        raise HTTPExc
+        raise HTTPException(
+            status_code=500,
+            detail=f"An error occurred: {str(e)}"
+        )
 
 # API endpoint implementation   
 @app.post("/query", response_model=QueryResponse)
@@ -173,7 +176,7 @@ async def query_endpoint(request: QueryRequest):
 # Add this function to run the API server
 def run_api():
     """Run the FastAPI server"""
-    uvicorn.run(app, host="127.0.0.1", port=8000)
+    uvicorn.run(app, host="44.227.217.144", port=8080)
     
     
 def main():
@@ -192,24 +195,26 @@ def main():
     st.title("Chat with Real AI")
     st.write("Ask me anything about DCPR 2034")
     
+    # Get the port from environment variable
+    port = int(os.environ.get("PORT", 8080))
     
     # Start API server in a separate thread
-    api_thread = threading.Thread(target=run_api, daemon=True)
+    api_thread = threading.Thread(target=lambda: run_api(port), daemon=True)
     api_thread.start()
     
     
      # Add a sidebar to show API information
     with st.sidebar:
         st.header("API Information")
-        st.write("API is running at: http://127.0.0.1:8000")
-        st.write("Try the API using the form below:")
+        api_url = f"https://realai-chatbot.onrender.com/api/query"
+        st.write(f"API Endpoint: {api_url}")
         
         # Add API test form in sidebar
         api_test_query = st.text_input("Test API Query")
         if st.button("Test API"):
             try:
                 response = requests.post(
-                    "http://127.0.0.1:8000/query",
+                    "https://realai-chatbot.onrender.com/api/query",
                     json={"query": api_test_query}
                 )
                 if response.status_code == 200:

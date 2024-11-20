@@ -11,8 +11,11 @@ import time
 
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
-from typing import List, Optional
+from typing import List
 import uvicorn
+import requests
+import threading
+import asyncio
 
 # Load environment variables
 load_dotenv()
@@ -159,47 +162,64 @@ async def process_query(query: str):
             relevant_documents=relevant_docs
         )
     except Exception as e:
-        # Fixed: Properly raise HTTPException with error details
-        raise HTTPException(
-            status_code=500,
-            detail=f"An error occurred while processing the query: {str(e)}"
-        )
-    
+        raise HTTPExc
+
+# API endpoint implementation   
 @app.post("/query", response_model=QueryResponse)
 async def query_endpoint(request: QueryRequest):
     """API endpoint to handle queries"""
     return await process_query(request.query)
 
 # Add this function to run the API server
-def run_api_server():
+def run_api():
     """Run the FastAPI server"""
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="127.0.0.1", port=8000)
     
     
 def main():
     
     """Main function with option to run web UI or API server"""
-    import argparse
+    #import argparse
     
-    parser = argparse.ArgumentParser(description="Run the chatbot as web UI or API server")
-    parser.add_argument("--mode", choices=["web", "api"], default="web",
-                       help="Run mode: 'web' for Streamlit UI or 'api' for REST API")
+    #parser = argparse.ArgumentParser(description="Run the chatbot as web UI or API server")
+    #parser.add_argument("--mode", choices=["web", "api"], default="web",
+                       #help="Run mode: 'web' for Streamlit UI or 'api' for REST API")
     
     
-    args = parser.parse_args()
+    #args = parser.parse_args()
     
-    if args.mode == "web":
-        # Your existing Streamlit web UI code
-        st.title("Chat with Real AI")
-        st.write("Ask me anything about DCPR 2034")
-        # ... rest of your existing main() function ...
-    else:
-        run_api_server()
-        
+    #if args.mode == "web":
     st.title("Chat with Real AI")
     st.write("Ask me anything about DCPR 2034")
     
-     # Chat input and history
+    
+    # Start API server in a separate thread
+    api_thread = threading.Thread(target=run_api, daemon=True)
+    api_thread.start()
+    
+    
+     # Add a sidebar to show API information
+    with st.sidebar:
+        st.header("API Information")
+        st.write("API is running at: http://127.0.0.1:8000")
+        st.write("Try the API using the form below:")
+        
+        # Add API test form in sidebar
+        api_test_query = st.text_input("Test API Query")
+        if st.button("Test API"):
+            try:
+                response = requests.post(
+                    "http://127.0.0.1:8000/query",
+                    json={"query": api_test_query}
+                )
+                if response.status_code == 200:
+                    st.json(response.json())
+                else:
+                    st.error(f"API Error: {response.status_code}")
+            except Exception as e:
+                st.error(f"Error testing API: {str(e)}")
+                
+    # Chat input and history
     if "messages" not in st.session_state:
         st.session_state.messages = []
         
@@ -218,24 +238,21 @@ def main():
     # Initialize components
     llm = initialize_llm()
     if llm is None:
-            st.error("Failed to initialize the language model. Please check your API key and try again.")
-            return
+        st.error("Failed to initialize the language model. Please check your API key and try again.")
+        return
     
         
     pc = initialize_pinecone()
     index = pc.Index("realincgemma")  # Replace with your index name
     embeddings = GoogleGenerativeAIEmbeddings(
-        model="models/embedding-001",
+    model="models/embedding-001",
         google_api_key=google_api_key
     )
     
             
     # Create a chat input
     
-    if user_input:
-   
-        
-            
+    if user_input:  
         st.session_state.messages.append({"role": "user", "content": user_input})
         with st.chat_message("user"):
             st.markdown(user_input)
@@ -251,6 +268,10 @@ def main():
                         
         # Clear the input field
         st.session_state.user_input = ""
+    #else:
+        #run_api_server()
+        
+    
 
 if __name__ == "__main__":
     main()

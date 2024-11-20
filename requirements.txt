@@ -9,3 +9,8 @@ langchain_community
 python-dotenv
 pypdf
 pinecone-client
+fastapi
+pydantic
+typing
+uvicorn
+requests

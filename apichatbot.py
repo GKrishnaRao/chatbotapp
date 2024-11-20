@@ -168,7 +168,7 @@ async def process_query(query: str):
         )
 
 # API endpoint implementation   
-@app.post("/query", response_model=QueryResponse)
+@app.post("/api/query", response_model=QueryResponse)
 async def query_endpoint(request: QueryRequest):
     """API endpoint to handle queries"""
     return await process_query(request.query)

@@ -104,11 +104,13 @@ def main():
     st.title("Chat with Real AI")
     st.write("Ask me anything about DCPR 2034")
     
+        
     # Initialize components
     llm = initialize_llm()
     if llm is None:
             st.error("Failed to initialize the language model. Please check your API key and try again.")
             return
+    
         
     pc = initialize_pinecone()
     index = pc.Index("realincgemma")  # Replace with your index name
@@ -117,27 +119,39 @@ def main():
         google_api_key=google_api_key
     )
     
-    # Chat input
-    user_input = st.text_input("Type your question here...")
-    
-    if user_input:
-        # Generate and display response
-        start_time = time.time()
-        with st.spinner("Generating answer..."):
-            response, similar_docs = generate_response(user_input, llm, index, embeddings)
-            st.write("Answer:")
-            st.write(response)
             
-            end_time = time.time()
-            execution_time = end_time - start_time
-            st.write(f"Response time: {execution_time:.2f} seconds")
+    # Create a form with the chat input
+    with st.form(key="chat_form", clear_on_submit=True):
+        user_input = st.text_input("Type your message here...")
+        submit_button = st.form_submit_button("Send")
+       
+    
+        if submit_button and user_input:
+            
+            st.write("Question:", )
+            st.write(user_input)
+                
+            # Generate and display response
+            start_time = time.time()
+            with st.spinner("Generating answer..."):
+                response, similar_docs = generate_response(user_input, llm, index, embeddings)
+            
+            
+                
+                st.write("Answer: ")
+                st.write(response)
+            
+                end_time = time.time()
+                execution_time = end_time - start_time
+                st.write(f"Response time: {execution_time:.2f} seconds")
+                
         
-        # Optional: Show relevant documents
-        with st.expander("View Related Documents"):
-            for i, doc in enumerate(similar_docs, 1):
-                st.write(f"Document {i}:")
-                st.write(doc.page_content)
-                st.write("---")
+            # Optional: Show relevant documents
+            with st.expander("View Related Documents"):
+                for i, doc in enumerate(similar_docs, 1):
+                    st.write(f"Document {i}:")
+                    st.write(doc.page_content)
+                    st.write("---")
 
 if __name__ == "__main__":
     main()

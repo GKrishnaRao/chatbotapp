@@ -7,21 +7,12 @@ from langchain_core.documents import Document
 from pinecone import Pinecone
 from dotenv import load_dotenv
 
-
-from fastapi import FastAPI, HTTPException
+import requests
 from pydantic import BaseModel
 from typing import List
-import uvicorn
-import requests
-import logging
 import threading
+from flask import Flask, request, jsonify
 
-# Add CORS middleware
-from fastapi.middleware.cors import CORSMiddleware
-
-
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
 
 # Load environment variables
 load_dotenv()
@@ -32,7 +23,8 @@ google_api_key = os.getenv("GOOGLE_API_KEY")
 pinecone_api_key = os.getenv("PINECONE_API_KEY")
 pinecone_environment = os.getenv("PINECONE_ENVIRONMENT")
 
-
+# Initialize Flask app
+app = Flask(__name__)
     
 def initialize_llm():
     """Initialize the language model"""
@@ -115,23 +107,10 @@ def generate_response(user_input, llm, index, embeddings):
         #print(response)
         return response.content, similar_docs
     except Exception as e:
-        logger.error(f"Error generating response: {str(e)}")
+        
         return "I apologize, but I encountered an error generating the response.", []
 
 
-
-
-# Initialize FastAPI app
-app = FastAPI()
-
-# Add CORS middleware
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
 
 # Define request and response models
 class QueryRequest(BaseModel):
@@ -146,18 +125,29 @@ class QueryResponse(BaseModel):
     answer: str
     relevant_documents: List[DocumentInfo]
 
-async def process_query(query: str):
-    """Process the query and return response with relevant documents"""
+
+@app.route('/api/query', methods=['POST'])
+def query_endpoint():
+    """API endpoint to handle queries"""
     try:
+        # Get request data
+        request_data = request.get_json()
+        if not request_data or 'query' not in request_data:
+            return jsonify({'error': 'No query provided'}), 400
+
+        query = request_data['query']
+        if not query.strip():
+            return jsonify({'error': 'Query cannot be empty'}), 400
+
         # Initialize components
         llm = initialize_llm()
         if llm is None:
-            raise HTTPException(status_code=500, detail="Failed to initialize language model")
-        
+            return jsonify({'error': 'Failed to initialize language model'}), 500
+
         pc = initialize_pinecone()
         if pc is None:
-            raise HTTPException(status_code=500, detail="Failed to initialize Pinecone")
-        
+            return jsonify({'error': 'Failed to initialize Pinecone'}), 500
+
         index = pc.Index("realincgemma")
         embeddings = GoogleGenerativeAIEmbeddings(
             model="models/embedding-001",
@@ -167,43 +157,25 @@ async def process_query(query: str):
         # Generate response
         response, similar_docs = generate_response(query, llm, index, embeddings)
 
-        # Format relevant documents
-        relevant_docs = [
-            DocumentInfo(
-                source=doc.metadata['source'],
-                page=doc.metadata['page'],
-                content=doc.page_content
-            ) for doc in similar_docs
-        ]
+        # Format response
+        relevant_docs = [{
+            'source': doc.metadata['source'],
+            'page': doc.metadata['page'],
+            'content': doc.page_content
+        } for doc in similar_docs]
 
-        return QueryResponse(
-            answer=response,
-            relevant_documents=relevant_docs
-        )
+        return jsonify({
+            'answer': response,
+            'relevant_documents': relevant_docs
+        })
+
     except Exception as e:
-        logger.error(f"Error processing query: {str(e)}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"An error occurred: {str(e)}"
-        )
+        return jsonify({'error': f'An error occurred: {str(e)}'}), 500
 
-# API endpoint implementation   
-@app.post("/api/query", response_model=QueryResponse)
-async def query_endpoint(request: QueryRequest):
-    """API endpoint to handle queries"""
-    return await process_query(request.query)
-
-
-
-
-
-# Add this function to run the API server
-def run_api(host: str, port: int):
-    """Run the FastAPI server"""
-    try:
-        uvicorn.run(app, host=host, port=port)
-    except Exception as e:
-        logger.error(f"Error running API server: {str(e)}")
+def run_flask(host, port):
+    """Run the Flask server"""
+    app.run(host=host, port=port)
+     
     
     
 def main():
@@ -222,29 +194,29 @@ def main():
     st.title("Chat with Real AI")
     st.write("Ask me anything about DCPR 2034")
     
-    # Get the port from environment variable or use default
-    port = 8080
-    host = os.getenv("HOST", "0.0.0.0")
+     # Get the port from environment variable or use default
+    port = int(os.getenv("PORT", 8080))
+    host = os.getenv("HOST", "192.168.31.63")
     
-    # Start API server in a separate thread
-    api_thread = threading.Thread(
-        target=run_api,
+    # Start Flask server in a separate thread
+    flask_thread = threading.Thread(
+        target=run_flask,
         args=(host, port),
         daemon=True
     )
-    api_thread.start()
+    flask_thread.start()
     
     
      # Add a sidebar to show API information
     with st.sidebar:
         st.header("API Information")
-        api_url = f"https://realai-chatbot.onrender.com/api/query"
+        api_url = f"http://192.168.31.63:8080/api/query"
         st.write(f"API Endpoint: {api_url}")
         
          # Add API test form
         api_test_query = st.text_input("Test API Query")
         if st.button("Test API"):
-            try:
+        
                 response = requests.post(
                     api_url,
                     json={"query": api_test_query}
@@ -253,8 +225,7 @@ def main():
                     st.json(response.json())
                 else:
                     st.error(f"API Error: {response.status_code}")
-            except Exception as e:
-                st.error(f"Error testing API: {str(e)}")
+          
                 
     # Chat input and history
     if "messages" not in st.session_state:
@@ -308,6 +279,7 @@ def main():
     #else:
         #run_api_server()
         
+    
     
 
 if __name__ == "__main__":

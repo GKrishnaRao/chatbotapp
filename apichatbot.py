@@ -174,9 +174,9 @@ async def query_endpoint(request: QueryRequest):
     return await process_query(request.query)
 
 # Add this function to run the API server
-def run_api():
+def run_api(port):
     """Run the FastAPI server"""
-    uvicorn.run(app, host="44.227.217.144", port=8080)
+    uvicorn.run(app, host="https://realai-chatbot.onrender.com", port=port)
     
     
 def main():
@@ -196,7 +196,7 @@ def main():
     st.write("Ask me anything about DCPR 2034")
     
     # Get the port from environment variable
-    port = int(os.environ.get("PORT", 8080))
+    port = 8080
     
     # Start API server in a separate thread
     api_thread = threading.Thread(target=lambda: run_api(port), daemon=True)

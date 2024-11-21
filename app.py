@@ -73,10 +73,10 @@ def vector_embedding():
     
         text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
         documents = text_splitter.split_documents(docs)
-        print(documents)
-        print('============ Outside the Code ============')
+      
+    
         # Create vectors and store in Pinecone
-        for i, doc in enumerate(documents):
+        for i, doc in  enumerate(documents[:106]):
             vector = embeddings.embed_query(doc.page_content)
             metadata = {
                 "text": doc.page_content,
@@ -85,7 +85,7 @@ def vector_embedding():
             }
             print('============ Run the Code ============ ', str(i))
             index.upsert(vectors=[{
-                "id": f"doc_regulation{i}",
+                "id": f"doc_{i}",
                 "values": vector,
                 "metadata": metadata
             }])

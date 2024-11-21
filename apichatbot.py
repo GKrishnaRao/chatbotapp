@@ -195,8 +195,8 @@ def main():
     st.write("Ask me anything about DCPR 2034")
     
      # Get the port from environment variable or use default
-    port = int(os.getenv("PORT", 8080))
-    host = os.getenv("HOST", "192.168.31.63")
+    port = 10000
+    host = os.getenv("HOST", "0.0.0.0")
     
     # Start Flask server in a separate thread
     flask_thread = threading.Thread(
@@ -210,7 +210,7 @@ def main():
      # Add a sidebar to show API information
     with st.sidebar:
         st.header("API Information")
-        api_url = f"http://192.168.31.63:8080/api/query"
+        api_url = f"http://0.0.0.0:10000/api/query"
         st.write(f"API Endpoint: {api_url}")
         
          # Add API test form

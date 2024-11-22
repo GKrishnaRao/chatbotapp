@@ -15,3 +15,6 @@ typing
 uvicorn
 requests
 flask
+pymilvus
+pdfplumber
+pymilvus[model]

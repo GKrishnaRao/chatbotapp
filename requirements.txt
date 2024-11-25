@@ -18,3 +18,4 @@ flask
 pymilvus
 pdfplumber
 pymilvus[model]
+scikit-learn

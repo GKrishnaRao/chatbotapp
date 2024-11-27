@@ -18,3 +18,5 @@ flask
 pymilvus
 pdfplumber
 pymilvus[model]
+torch
+openai

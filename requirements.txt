@@ -18,5 +18,9 @@ flask
 pymilvus
 pdfplumber
 pymilvus[model]
+<<<<<<< HEAD
 torch
 openai
+=======
+scikit-learn
+>>>>>>> 8be090837457386b2d9c43f3d52882b5be4878a1
